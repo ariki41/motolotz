@@ -53,7 +53,7 @@ sudo systemctl enable --now certbot.timer
 
 ## ログ監視
 
-Compose の `alloy` サービスは、共有ストレージの Laravel ログとホストの Nginx access/error ログを Raspberry Pi の Loki へ送信します。送信先は GitHub の production 環境変数 `PRODUCTION_LOKI_URL` で管理し、Tailscale URL（例: `http://100.79.190.75:3100/loki/api/v1/push`）を設定します。Alloy の管理ポートはコンテナ内の loopback にだけバインドされます。
+Compose の `alloy` サービスは、共有ストレージの Laravel ログとホストの Nginx access/error ログを Raspberry Pi の Loki へ送信します。送信先は GitHub の production 環境変数 `PRODUCTION_LOKI_URL` で管理し、Tailscale URL（例: `http://100.79.190.75:3100/loki/api/v1/push`）を設定します。デプロイスクリプトはホストの `adm` グループGIDを検出し、Alloy の補助グループへ追加するため、Alloyはroot化せずにNginxログを読み取れます。Alloy の管理ポートはコンテナ内の loopback にだけバインドされます。
 
 Laravel の `daily` ログは JSON Lines 形式で出力され、14日でローテーションされます。コンテキスト内のパスワード、Cookie、トークン、認可ヘッダー、API キー、secret を保存前に `[REDACTED]` へ置換します。Alloy も Nginx ログを含む全送信行へ同等のマスキングを適用します。
 
@@ -65,7 +65,7 @@ Laravel の `daily` ログは JSON Lines 形式で出力され、14日でロー�
 {application="motolotz", environment="production"}
 ```
 
-`job="laravel"`、`job="laravel-query"`、`job="nginx-access"`、`job="nginx-error"` でログ種別を、`host` で送信元ホストを絞り込めます。たとえば遅延クエリは `{application="motolotz", environment="production", job="laravel-query"}` で検索できます。Alloy の稼働状態は本番サーバーで `docker compose -f /opt/motolotz/compose.deploy.yml ps alloy` と `docker compose -f /opt/motolotz/compose.deploy.yml logs --tail=100 alloy` を確認し、停止時は `docker compose -f /opt/motolotz/compose.deploy.yml up -d alloy` で復旧します。Pi の Tailscale IP を変更した場合は、GitHub の `PRODUCTION_LOKI_URL` を更新して再デプロイします。
+`job="laravel"`、`job="laravel-query"`、`job="nginx-access"`、`job="nginx-error"` でログ種別を、`host` で送信元ホストを絞り込めます。たとえば遅延クエリは `{application="motolotz", environment="production", job="laravel-query"}` で検索できます。Alloy の稼働状態は本番サーバーで `docker ps --filter name=motolotz-alloy-1` と `docker logs --tail=100 motolotz-alloy-1` を確認し、停止時は `docker restart motolotz-alloy-1` で復旧します。Pi の Tailscale IP を変更した場合は、GitHub の `PRODUCTION_LOKI_URL` を更新して再デプロイします。
 
 ## リリースと運用
 
