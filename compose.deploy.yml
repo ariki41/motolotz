@@ -9,6 +9,7 @@ services:
   alloy:
     image: grafana/alloy:v1.10.1
     command: run --server.http.listen-addr=127.0.0.1:12345 --storage.path=/var/lib/alloy/data /etc/alloy/config.alloy
+    group_add: ["${ALLOY_NGINX_LOG_GID:?}"]
     environment:
       LOKI_URL: "${LOKI_URL:?}"
     user: "473:473"
