@@ -7,6 +7,7 @@ loki.write "raspberry_pi" {
 	external_labels = {
 		application = "motolotz",
 		environment = "production",
+		host        = constants.hostname,
 	}
 }
 
@@ -28,13 +29,25 @@ loki.process "redact" {
 
 local.file_match "laravel" {
 	path_targets = [{
-		__path__ = "/var/www/html/storage/logs/*.log",
+		__path__ = "/var/www/html/storage/logs/laravel*.log",
 		job      = "laravel",
 	}]
 }
 
 loki.source.file "laravel" {
 	targets    = local.file_match.laravel.targets
+	forward_to = [loki.process.redact.receiver]
+}
+
+local.file_match "query" {
+	path_targets = [{
+		__path__ = "/var/www/html/storage/logs/query*.log",
+		job      = "laravel-query",
+	}]
+}
+
+loki.source.file "query" {
+	targets    = local.file_match.query.targets
 	forward_to = [loki.process.redact.receiver]
 }
 
