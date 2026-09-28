@@ -29,6 +29,9 @@ GitHubの `production` Environment に次を登録します。アプリケーシ
 | Variable | `PRODUCTION_YOLP_URL` | ローカル検索API URL（必須） |
 | Variable | `PRODUCTION_YOLP_GEOCODE_URL` | ジオコーダーAPI URL（必須） |
 | Variable | `PRODUCTION_JAPAN_POST_POSTAL_CODE_URL` | 日本郵便の郵便番号ZIP URL（必須） |
+| Variable | `PRODUCTION_QUERY_LOG_SLOW_MS` | 遅延クエリの記録しきい値ms（未登録時は500） |
+| Variable | `PRODUCTION_QUERY_LOG_SAMPLE_RATE` | 遅延クエリの記録率、0〜1（未登録時は0.1） |
+| Variable | `PRODUCTION_QUERY_LOG_MAX_PER_PROCESS` | PHPプロセスあたりの最大記録件数（未登録時は10） |
 
 Actionsはこれらから `.env` を一時生成して `/opt/motolotz/.env` に転送します。値をログ出力せず、GitHub Actionsランナーの一時ファイルはジョブ終了時に削除されます。
 
@@ -52,7 +55,9 @@ sudo systemctl enable --now certbot.timer
 
 Compose の `alloy` サービスは、共有ストレージの Laravel ログとホストの Nginx access/error ログを Raspberry Pi の Loki へ送信します。送信先は GitHub の production 環境変数 `PRODUCTION_LOKI_URL` で管理し、Tailscale URL（例: `http://100.79.190.75:3100/loki/api/v1/push`）を設定します。Alloy の管理ポートはコンテナ内の loopback にだけバインドされます。
 
-Laravel の `single` / `daily` ログは JSON Lines 形式で出力され、コンテキスト内のパスワード、Cookie、トークン、認可ヘッダー、API キー、secret を保存前に `[REDACTED]` へ置換します。Alloy も Nginx ログを含む全送信行へ同等のマスキングを適用します。
+Laravel の `daily` ログは JSON Lines 形式で出力され、14日でローテーションされます。コンテキスト内のパスワード、Cookie、トークン、認可ヘッダー、API キー、secret を保存前に `[REDACTED]` へ置換します。Alloy も Nginx ログを含む全送信行へ同等のマスキングを適用します。
+
+`query` ログは遅延クエリだけを対象にし、500 ms以上、10%サンプリング、各PHPプロセスあたり最大10件で記録します。SQLのバインド値は記録せず、リテラル値も `?` に置換します。必要な場合は GitHub の production Environment で `QUERY_LOG_SLOW_MS`、`QUERY_LOG_SAMPLE_RATE`、`QUERY_LOG_MAX_PER_PROCESS` を調整して再デプロイします。
 
 デプロイ後は、Pi の Grafana Explore で Loki を選び、次の LogQL で送信を確認します。
 
@@ -60,7 +65,7 @@ Laravel の `single` / `daily` ログは JSON Lines 形式で出力され、コ�
 {application="motolotz", environment="production"}
 ```
 
-`job="laravel"`、`job="nginx-access"`、`job="nginx-error"` でログ種別を絞り込めます。Pi の Tailscale IP を変更した場合は、GitHub の `PRODUCTION_LOKI_URL` を更新して再デプロイします。
+`job="laravel"`、`job="laravel-query"`、`job="nginx-access"`、`job="nginx-error"` でログ種別を、`host` で送信元ホストを絞り込めます。たとえば遅延クエリは `{application="motolotz", environment="production", job="laravel-query"}` で検索できます。Alloy の稼働状態は本番サーバーで `docker compose -f /opt/motolotz/compose.deploy.yml ps alloy` と `docker compose -f /opt/motolotz/compose.deploy.yml logs --tail=100 alloy` を確認し、停止時は `docker compose -f /opt/motolotz/compose.deploy.yml up -d alloy` で復旧します。Pi の Tailscale IP を変更した場合は、GitHub の `PRODUCTION_LOKI_URL` を更新して再デプロイします。
 
 ## リリースと運用
 

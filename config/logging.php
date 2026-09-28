@@ -38,6 +38,13 @@ return [
         'trace' => env('LOG_DEPRECATIONS_TRACE', false),
     ],
 
+    'query' => [
+        'enabled' => env('QUERY_LOG_ENABLED', false),
+        'slow_query_ms' => (int) env('QUERY_LOG_SLOW_MS', 500),
+        'sample_rate' => max(0.0, min(1.0, (float) env('QUERY_LOG_SAMPLE_RATE', 0.1))),
+        'max_per_process' => max(1, (int) env('QUERY_LOG_MAX_PER_PROCESS', 10)),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Log Channels
@@ -74,6 +81,16 @@ return [
             'path' => storage_path('logs/laravel.log'),
             'level' => env('LOG_LEVEL', 'debug'),
             'days' => env('LOG_DAILY_DAYS', 14),
+            'tap' => [RedactSensitiveLogData::class],
+            'formatter' => JsonFormatter::class,
+            'replace_placeholders' => true,
+        ],
+
+        'query' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/query.log'),
+            'level' => 'warning',
+            'days' => env('LOG_QUERY_DAILY_DAYS', 14),
             'tap' => [RedactSensitiveLogData::class],
             'formatter' => JsonFormatter::class,
             'replace_placeholders' => true,

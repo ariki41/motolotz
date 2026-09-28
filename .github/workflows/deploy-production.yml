@@ -58,6 +58,9 @@ jobs:
       PRODUCTION_YOLP_GEOCODE_URL: ${{ vars.PRODUCTION_YOLP_GEOCODE_URL }}
       PRODUCTION_JAPAN_POST_POSTAL_CODE_URL: ${{ vars.PRODUCTION_JAPAN_POST_POSTAL_CODE_URL }}
       PRODUCTION_LOKI_URL: ${{ vars.PRODUCTION_LOKI_URL }}
+      PRODUCTION_QUERY_LOG_SLOW_MS: ${{ vars.PRODUCTION_QUERY_LOG_SLOW_MS || '500' }}
+      PRODUCTION_QUERY_LOG_SAMPLE_RATE: ${{ vars.PRODUCTION_QUERY_LOG_SAMPLE_RATE || '0.1' }}
+      PRODUCTION_QUERY_LOG_MAX_PER_PROCESS: ${{ vars.PRODUCTION_QUERY_LOG_MAX_PER_PROCESS || '10' }}
     steps:
       - uses: actions/checkout@v7
       - name: Configure SSH
@@ -110,6 +113,15 @@ jobs:
             write_dotenv APP_DEBUG 'false'
             write_dotenv APP_URL "$PRODUCTION_APP_URL"
             write_dotenv APP_TIMEZONE 'Asia/Tokyo'
+            write_dotenv LOG_CHANNEL 'stack'
+            write_dotenv LOG_STACK 'daily'
+            write_dotenv LOG_LEVEL 'warning'
+            write_dotenv LOG_DAILY_DAYS '14'
+            write_dotenv LOG_QUERY_DAILY_DAYS '14'
+            write_dotenv QUERY_LOG_ENABLED 'true'
+            write_dotenv QUERY_LOG_SLOW_MS "$PRODUCTION_QUERY_LOG_SLOW_MS"
+            write_dotenv QUERY_LOG_SAMPLE_RATE "$PRODUCTION_QUERY_LOG_SAMPLE_RATE"
+            write_dotenv QUERY_LOG_MAX_PER_PROCESS "$PRODUCTION_QUERY_LOG_MAX_PER_PROCESS"
             write_dotenv APP_LOCALE 'ja'
             write_dotenv APP_FALLBACK_LOCALE 'ja'
             write_dotenv DB_CONNECTION 'mysql'
