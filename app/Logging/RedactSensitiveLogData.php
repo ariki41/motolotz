@@ -5,6 +5,7 @@ namespace App\Logging;
 use Illuminate\Log\Logger;
 use Monolog\Logger as MonologLogger;
 use Monolog\LogRecord;
+use Throwable;
 
 class RedactSensitiveLogData
 {
@@ -42,7 +43,9 @@ class RedactSensitiveLogData
                 continue;
             }
 
-            if (is_array($value)) {
+            if ($value instanceof Throwable) {
+                $data[$key] = $this->redactThrowable($value);
+            } elseif (is_array($value)) {
                 $data[$key] = $this->redact($value);
             } elseif (is_string($value)) {
                 $data[$key] = $this->redactString($value);
@@ -50,6 +53,24 @@ class RedactSensitiveLogData
         }
 
         return $data;
+    }
+
+    /**
+     * Normalize exceptions before JsonFormatter so their message and trace are
+     * redacted before the on-disk Laravel log is written.
+     *
+     * @return array{class: string, message: string, code: int|string, file: string, line: int, trace: string}
+     */
+    private function redactThrowable(Throwable $exception): array
+    {
+        return [
+            'class' => $exception::class,
+            'message' => $this->redactString($exception->getMessage()),
+            'code' => $exception->getCode(),
+            'file' => $exception->getFile(),
+            'line' => $exception->getLine(),
+            'trace' => $this->redactString($exception->getTraceAsString()),
+        ];
     }
 
     private function isSensitiveKey(string $key): bool

@@ -16,14 +16,90 @@ loki.write "raspberry_pi" {
 loki.process "redact" {
 	forward_to = [loki.write.raspberry_pi.receiver]
 
+	stage.match {
+		selector      = `{job="nginx-access"}`
+		pipeline_name = "nginx_access_timestamp"
+
+		stage.json {
+			expressions = { log_timestamp = "time" }
+		}
+
+		stage.timestamp {
+			source            = "log_timestamp"
+			format            = "RFC3339"
+			action_on_failure = "skip"
+		}
+	}
+
+	stage.match {
+		selector      = `{job=~"laravel|laravel-query"}`
+		pipeline_name = "laravel_timestamp"
+
+		stage.json {
+			expressions = { log_timestamp = "datetime" }
+		}
+
+		stage.timestamp {
+			source            = "log_timestamp"
+			format            = "RFC3339Nano"
+			action_on_failure = "skip"
+		}
+	}
+
+	stage.match {
+		selector      = `{job="nginx-error"}`
+		pipeline_name = "nginx_error_fields"
+
+		stage.regex {
+			expression = "^(?P<timestamp>\\S+ \\S+) \\[(?P<error_level>[^\\]]+)\\] (?P<message>.*)$"
+		}
+
+		stage.regex {
+			expression = "(?:^|, )client: (?P<client>[^,]+)"
+			source     = "message"
+		}
+
+		stage.regex {
+			expression = "(?:^|, )server: (?P<server>[^,]+)"
+			source     = "message"
+		}
+
+		stage.regex {
+			expression = "(?:^|, )request: \\\"(?P<request>[^\\\"]*)\\\""
+			source     = "message"
+		}
+
+		stage.regex {
+			expression = "(?:^|, )upstream: \\\"(?P<upstream>[^\\\"]*)\\\""
+			source     = "message"
+		}
+
+		stage.regex {
+			expression = "(?:^|, )request_id: (?P<request_id>[A-Za-z0-9._:-]+)"
+			source     = "message"
+		}
+
+		stage.timestamp {
+			source            = "timestamp"
+			format            = "2006/01/02 15:04:05"
+			location          = "Asia/Tokyo"
+			action_on_failure = "skip"
+		}
+
+		stage.pack {
+			labels           = ["timestamp", "error_level", "message", "client", "server", "request", "upstream", "request_id"]
+			ingest_timestamp = false
+		}
+	}
+
 	stage.replace {
-		expression = `(?i)(password|passwd|pwd|cookie|token|authorization|api[_-]?key|secret)(=|%3d|"\s*:\s*")[^&\s",}]+`
+		expression = `(?i)(?:password|passwd|pwd|cookie|token|authorization|api[_-]?key|secret)(?:=|%3d|"\s*:\s*")(?P<sensitive_value>[^&\s",}]+)`
 		replace    = "[REDACTED]"
 	}
 
 	stage.replace {
-		expression = `(?i)bearer\s+[^\s",}]+`
-		replace    = "Bearer [REDACTED]"
+		expression = `(?i)bearer\s+(?P<bearer_value>[^\s",}]+)`
+		replace    = "[REDACTED]"
 	}
 }
 
@@ -54,7 +130,7 @@ loki.source.file "query" {
 local.file_match "nginx" {
 	path_targets = [
 		{
-			__path__ = "/var/log/nginx/access.log",
+			__path__ = "/var/log/nginx/motolotz_access.json.log",
 			job      = "nginx-access",
 		},
 		{

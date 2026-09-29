@@ -39,6 +39,10 @@ Actionsはこれらから `.env` を一時生成して `/opt/motolotz/.env` に�
 
 UFWは80/443と管理元限定SSHだけを許可します。Nginx設定 [motolotz.com.conf](../deploy/nginx/motolotz.com.conf) を `/etc/nginx/sites-available/` へ配置して有効化します。Nginxはホストの `127.0.0.1:8000` で待ち受けるアプリコンテナへリバースプロキシします。
 
+Cloudflare をプロキシとして使う場合、この設定は Cloudflare の公開 IP レンジから来た通信だけで `CF-Connecting-IP` を信頼します。従来の `/var/log/nginx/access.log`（LTSV）はホスト上の既存ツール向けに維持し、Loki には `/var/log/nginx/motolotz_access.json.log` を送信します。この名前は一般的な `/var/log/nginx/*.log` の logrotate 対象にもなります。JSON ログの `client_ip` は復元した利用者 IP、`remote_addr` は Cloudflare からの接続元です。`CF-IPCountry` は `country` として記録します。`uri` と `request_uri` は認証情報や個人情報を含み得る query string を除いたパスだけを保存します。オリジンへの直接アクセスでヘッダーを偽装されないよう、運用時はファイアウォールで 80/443 の送信元を Cloudflare の公開 IP レンジに制限します。Cloudflare が IP レンジを変更した場合は、[公開リスト](https://www.cloudflare.com/ips/) に合わせて `set_real_ip_from` も更新してください。
+
+Nginx 設定はアプリケーションのコンテナデプロイでは自動更新されません。`deploy/nginx/motolotz.com.conf` をホストへ反映するときは、既存の証明書パスを保持したうえで `sudo nginx -t` を通し、成功した場合だけ reload します。
+
 DNSのA/AAAAレコードをKAGOYAサーバーへ向けた後、HTTP設定を有効にしてCertbotを実行します。
 
 ```bash
@@ -53,9 +57,11 @@ sudo systemctl enable --now certbot.timer
 
 ## ログ監視
 
-Compose の `alloy` サービスは、共有ストレージの Laravel ログとホストの Nginx access/error ログを Raspberry Pi の Loki へ送信します。送信先は GitHub の production 環境変数 `PRODUCTION_LOKI_URL` で管理し、Tailscale URL（例: `http://100.79.190.75:3100/loki/api/v1/push`）を設定します。デプロイスクリプトはホストの `adm` グループGIDを検出し、Alloy の補助グループへ追加するため、Alloyはroot化せずにNginxログを読み取れます。Alloy の管理ポートはコンテナ内の loopback にだけバインドされます。
+Compose の `alloy` サービスは、共有ストレージの Laravel ログとホストの Nginx JSON access/error ログを Raspberry Pi の Loki へ送信します。送信先は GitHub の production 環境変数 `PRODUCTION_LOKI_URL` で管理し、Tailscale URL（例: `http://100.79.190.75:3100/loki/api/v1/push`）を設定します。デプロイスクリプトはホストの `adm` グループGIDを検出し、Alloy の補助グループへ追加するため、Alloyはroot化せずにNginxログを読み取れます。Alloy の管理ポートはコンテナ内の loopback にだけバインドされます。
 
-Laravel の `daily` ログは JSON Lines 形式で出力され、14日でローテーションされます。コンテキスト内のパスワード、Cookie、トークン、認可ヘッダー、API キー、secret を保存前に `[REDACTED]` へ置換します。Alloy も Nginx ログを含む全送信行へ同等のマスキングを適用します。
+Nginx は各リクエストの `$request_id` を JSON access log に記録し、`X-Request-ID` としてアプリへ渡します。Laravel はこの値を `request_id` として全ログコンテキストへ追加し、レスポンスにも返します。これにより access log と Laravel log を同じ ID で検索できます。Nginx 自身の標準 error.log はフォーマットを変更できず通常は request_id を含まないため、Alloy が level、message、client、server、request、upstream と、行中に存在する場合だけ request_id を抽出して JSON 化します。error.log は同じ時間範囲、client、request、upstream を使って補助的に相関します。
+
+Laravel の `daily` ログは stack trace を含む JSON Lines 形式で出力され、14日でローテーションされます。コンテキスト内のパスワード、Cookie、トークン、認可ヘッダー、API キー、secret を保存前に `[REDACTED]` へ置換します。Alloy も Nginx ログを含む全送信行へ同等のマスキングを適用します。
 
 `query` ログは遅延クエリだけを対象にし、500 ms以上、10%サンプリング、各PHPプロセスあたり最大10件で記録します。SQLのバインド値は記録せず、リテラル値も `?` に置換します。必要な場合は GitHub の production Environment で `QUERY_LOG_SLOW_MS`、`QUERY_LOG_SAMPLE_RATE`、`QUERY_LOG_MAX_PER_PROCESS` を調整して再デプロイします。
 
@@ -65,7 +71,7 @@ Laravel の `daily` ログは JSON Lines 形式で出力され、14日でロー�
 {application="motolotz", environment="production"}
 ```
 
-`job="laravel"`、`job="laravel-query"`、`job="nginx-access"`、`job="nginx-error"` でログ種別を、`host` で送信元ホストを絞り込めます。たとえば遅延クエリは `{application="motolotz", environment="production", job="laravel-query"}` で検索できます。Alloy の稼働状態は本番サーバーで `docker ps --filter name=motolotz-alloy-1` と `docker logs --tail=100 motolotz-alloy-1` を確認し、停止時は `docker restart motolotz-alloy-1` で復旧します。Pi の Tailscale IP を変更した場合は、GitHub の `PRODUCTION_LOKI_URL` を更新して再デプロイします。
+`job="laravel"`、`job="laravel-query"`、`job="nginx-access"`、`job="nginx-error"` でログ種別を、`host` で送信元ホストを絞り込めます。`client_ip`、`request_uri`、`user_agent`、`request_id` は高カーディナリティになるため Loki label にはせず、JSON フィールドとして `| json` で検索します。たとえば `{application="motolotz", environment="production", job="nginx-access"} | json | request_id="<id>"` でアクセスを確認できます。Alloy の稼働状態は本番サーバーで `docker ps --filter name=motolotz-alloy-1` と `docker logs --tail=100 motolotz-alloy-1` を確認し、停止時は `docker restart motolotz-alloy-1` で復旧します。Pi の Tailscale IP を変更した場合は、GitHub の `PRODUCTION_LOKI_URL` を更新して再デプロイします。
 
 ## リリースと運用
 
