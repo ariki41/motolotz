@@ -79,6 +79,7 @@ jobs:
           test -d "$1" && test -w "$1"
           docker info >/dev/null
           docker compose version >/dev/null
+          sudo -n nginx -t >/dev/null
           REMOTE
       - name: Upload and activate image
         run: |
@@ -147,10 +148,12 @@ jobs:
           ssh -p "$DEPLOY_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes "$DEPLOY_USER@$DEPLOY_HOST" \
             "chmod 600 '$DEPLOY_PATH/.env'"
           ssh -p "$DEPLOY_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes "$DEPLOY_USER@$DEPLOY_HOST" \
-            "mkdir -p '$DEPLOY_PATH/deploy/alloy'"
+            "mkdir -p '$DEPLOY_PATH/deploy/alloy' '$DEPLOY_PATH/deploy/nginx'"
           scp -P "$DEPLOY_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes compose.deploy.yml scripts/deploy.sh \
             "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/"
           scp -P "$DEPLOY_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes deploy/alloy/config.alloy \
             "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/deploy/alloy/config.alloy"
+          scp -P "$DEPLOY_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes deploy/nginx/motolotz.com.conf \
+            "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/deploy/nginx/motolotz.com.conf"
           ssh -p "$DEPLOY_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes "$DEPLOY_USER@$DEPLOY_HOST" \
             "env IMAGE_NAME='$IMAGE_NAME' IMAGE_DIGEST='$IMAGE_DIGEST' bash '$DEPLOY_PATH/deploy.sh' '$DEPLOY_PATH'"

@@ -37,13 +37,11 @@ Actionsはこれらから `.env` を一時生成して `/opt/motolotz/.env` に�
 
 ## 公開とTLS
 
-UFWは80/443と管理元限定SSHだけを許可します。Nginx設定 [motolotz.com.conf](../deploy/nginx/motolotz.com.conf) を `/etc/nginx/sites-available/` へ配置して有効化します。Nginxはホストの `127.0.0.1:8000` で待ち受けるアプリコンテナへリバースプロキシします。
+UFWは80/443と管理元限定SSHだけを許可します。Nginx設定 [motolotz.com.conf](../deploy/nginx/motolotz.com.conf) は本番デプロイ時に `/etc/nginx/sites-available/` へ配置して有効化します。デプロイは既存設定をバックアップし、`nginx -t` に成功した場合だけ reload します。デプロイユーザーには、パスワードなしで `install`、`ln`、`cp`、`rm`、`nginx -t`、`systemctl reload nginx` を実行できる最小限のsudo権限を設定してください。Nginxはホストの `127.0.0.1:8000` で待ち受けるアプリコンテナへリバースプロキシします。
 
 DNSのA/AAAAレコードをKAGOYAサーバーへ向けた後、HTTP設定を有効にしてCertbotを実行します。
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/motolotz.com.conf /etc/nginx/sites-enabled/
-sudo nginx -t && sudo systemctl reload nginx
 sudo certbot --nginx -d motolotz.com -d www.motolotz.com
 sudo certbot renew --dry-run
 sudo systemctl enable --now certbot.timer
@@ -53,7 +51,7 @@ sudo systemctl enable --now certbot.timer
 
 ## ログ監視
 
-Compose の `alloy` サービスは、共有ストレージの Laravel ログとホストの Nginx access/error ログを Raspberry Pi の Loki へ送信します。送信先は GitHub の production 環境変数 `PRODUCTION_LOKI_URL` で管理し、Tailscale URL（例: `http://100.79.190.75:3100/loki/api/v1/push`）を設定します。デプロイスクリプトはホストの `adm` グループGIDを検出し、Alloy の補助グループへ追加するため、Alloyはroot化せずにNginxログを読み取れます。Alloy の管理ポートはコンテナ内の loopback にだけバインドされます。
+Compose の `alloy` サービスは、共有ストレージの Laravel ログとホストの Nginx access/error ログを Raspberry Pi の Loki へ送信します。Nginx access log はJSON Linesで出力し、Cloudflare のプロキシ経由で追加される `CF-IPCountry` を `country` として収集します。Cloudflareを経由しないアクセスは国コードを持たず、ダッシュボードの地図から除外されます。送信先は GitHub の production 環境変数 `PRODUCTION_LOKI_URL` で管理し、Tailscale URL（例: `http://100.79.190.75:3100/loki/api/v1/push`）を設定します。デプロイスクリプトはホストの `adm` グループGIDを検出し、Alloy の補助グループへ追加するため、Alloyはroot化せずにNginxログを読み取れます。Alloy の管理ポートはコンテナ内の loopback にだけバインドされます。
 
 Laravel の `daily` ログは JSON Lines 形式で出力され、14日でローテーションされます。コンテキスト内のパスワード、Cookie、トークン、認可ヘッダー、API キー、secret を保存前に `[REDACTED]` へ置換します。Alloy も Nginx ログを含む全送信行へ同等のマスキングを適用します。
 
