@@ -2,7 +2,7 @@
 
 namespace App\Logging;
 
-use Monolog\Logger;
+use Illuminate\Log\Logger;
 use Monolog\LogRecord;
 
 class RedactSensitiveLogData
@@ -13,7 +13,7 @@ class RedactSensitiveLogData
      */
     public function __invoke(Logger $logger): void
     {
-        $logger->pushProcessor(function (LogRecord $record): LogRecord {
+        $logger->getLogger()->pushProcessor(function (LogRecord $record): LogRecord {
             return $record->with(
                 message: $this->redactString($record->message),
                 context: $this->redact($record->context),
