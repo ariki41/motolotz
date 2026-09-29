@@ -39,6 +39,8 @@ Actionsはこれらから `.env` を一時生成して `/opt/motolotz/.env` に�
 
 UFWは80/443と管理元限定SSHだけを許可します。Nginx設定 [motolotz.com.conf](../deploy/nginx/motolotz.com.conf) を `/etc/nginx/sites-available/` へ配置して有効化します。Nginxはホストの `127.0.0.1:8000` で待ち受けるアプリコンテナへリバースプロキシします。
 
+Cloudflare をプロキシとして使う場合、この設定は Cloudflare の公開 IP レンジから来た通信だけで `CF-Connecting-IP` を信頼します。アクセスログの `client_ip` は復元した利用者 IP、`cloudflare_addr` と `cloudflare_port` は Cloudflare からの接続情報です。オリジンへの直接アクセスでヘッダーを偽装されないよう、運用時はファイアウォールで 80/443 の送信元を Cloudflare の公開 IP レンジに制限します。Cloudflare が IP レンジを変更した場合は、[公開リスト](https://www.cloudflare.com/ips/) に合わせて `set_real_ip_from` も更新してください。
+
 DNSのA/AAAAレコードをKAGOYAサーバーへ向けた後、HTTP設定を有効にしてCertbotを実行します。
 
 ```bash
