@@ -73,6 +73,7 @@ return [
             'level' => env('LOG_LEVEL', 'debug'),
             'tap' => [RedactSensitiveLogData::class],
             'formatter' => JsonFormatter::class,
+            'formatter_with' => ['includeStacktraces' => true],
             'replace_placeholders' => true,
         ],
 
@@ -83,6 +84,7 @@ return [
             'days' => env('LOG_DAILY_DAYS', 14),
             'tap' => [RedactSensitiveLogData::class],
             'formatter' => JsonFormatter::class,
+            'formatter_with' => ['includeStacktraces' => true],
             'replace_placeholders' => true,
         ],
 
@@ -93,6 +95,7 @@ return [
             'days' => env('LOG_QUERY_DAILY_DAYS', 14),
             'tap' => [RedactSensitiveLogData::class],
             'formatter' => JsonFormatter::class,
+            'formatter_with' => ['includeStacktraces' => true],
             'replace_placeholders' => true,
         ],
 
