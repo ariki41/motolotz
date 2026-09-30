@@ -13,28 +13,16 @@ class SlowQueryLogger
     ) {}
 
     /**
-     * Record every query, distinguishing normal and slow queries. Bindings are
-     * included to support query-level debugging.
+     * Record every query with the request IP, duration, and value-filled SQL.
      */
     public function __invoke(QueryExecuted $query): void
     {
-
         $isSlowQuery = $query->time >= $this->slowQueryMilliseconds;
 
         $this->logger->{$isSlowQuery ? 'warning' : 'info'}($isSlowQuery ? 'Slow database query' : 'Database query', [
-            'connection' => $query->connectionName,
+            'ip_address' => request()->ip(),
             'duration_ms' => round($query->time, 2),
-            'sql' => $this->redactLiterals($query->sql),
-            'bindings' => $query->bindings,
+            'sql' => $query->toRawSql(),
         ]);
-    }
-
-    private function redactLiterals(string $sql): string
-    {
-        $sql = preg_replace("/(?<![[:alnum:]_])(?:x'[^']*'|0x[0-9a-f]+)/i", '?', $sql) ?? $sql;
-        $sql = preg_replace("/'(?:[^'\\\\]|\\\\.)*'/", '?', $sql) ?? $sql;
-        $sql = preg_replace('/"(?:[^"\\\\]|\\\\.)*"/', '?', $sql) ?? $sql;
-
-        return preg_replace('/(?<![[:alnum:]_])[-+]?\\d+(?:\\.\\d+)?(?![[:alnum:]_])/', '?', $sql) ?? $sql;
     }
 }
