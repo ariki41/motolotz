@@ -17,23 +17,25 @@ class SlowQueryLogger
     ) {}
 
     /**
-     * Record only sampled slow queries. Bindings are deliberately never logged:
-     * they can contain personal data or credentials even when the SQL is safe.
+     * Record sampled queries, distinguishing normal and slow queries. Bindings
+     * are included to support query-level debugging.
      */
     public function __invoke(QueryExecuted $query): void
     {
-        if ($query->time < $this->slowQueryMilliseconds
-            || $this->loggedQueries >= $this->maxQueries
+        if ($this->loggedQueries >= $this->maxQueries
             || mt_rand() / mt_getrandmax() > $this->sampleRate) {
             return;
         }
 
         $this->loggedQueries++;
 
-        $this->logger->warning('Slow database query', [
+        $isSlowQuery = $query->time >= $this->slowQueryMilliseconds;
+
+        $this->logger->{$isSlowQuery ? 'warning' : 'info'}($isSlowQuery ? 'Slow database query' : 'Database query', [
             'connection' => $query->connectionName,
             'duration_ms' => round($query->time, 2),
             'sql' => $this->redactLiterals($query->sql),
+            'bindings' => $query->bindings,
         ]);
     }
 

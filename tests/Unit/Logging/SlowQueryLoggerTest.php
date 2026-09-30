@@ -10,7 +10,7 @@ use Tests\TestCase;
 
 class SlowQueryLoggerTest extends TestCase
 {
-    public function test_it_records_a_slow_query_without_bindings_or_literals(): void
+    public function test_it_records_a_slow_query_with_bindings_and_without_literals(): void
     {
         $handler = new TestHandler;
         $logger = new Logger('query', [$handler]);
@@ -28,10 +28,10 @@ class SlowQueryLoggerTest extends TestCase
         $this->assertSame('Slow database query', $record->message);
         $this->assertSame('select * from users where email = ? and id = ?', $record->context['sql']);
         $this->assertSame(501.25, $record->context['duration_ms']);
-        $this->assertArrayNotHasKey('bindings', $record->context);
+        $this->assertSame(['person@example.test', 42], $record->context['bindings']);
     }
 
-    public function test_it_ignores_fast_queries_and_caps_logs_per_process(): void
+    public function test_it_records_normal_queries_and_caps_logs_per_process(): void
     {
         $handler = new TestHandler;
         $logger = new Logger('query', [$handler]);
@@ -39,9 +39,9 @@ class SlowQueryLoggerTest extends TestCase
         $connection = $this->app['db']->connection();
 
         $queryLogger(new QueryExecuted('select 1', [], 499, $connection));
-        $queryLogger(new QueryExecuted('select 1', [], 500, $connection));
         $queryLogger(new QueryExecuted('select 2', [], 600, $connection));
 
         $this->assertCount(1, $handler->getRecords());
+        $this->assertSame('Database query', $handler->getRecords()[0]->message);
     }
 }
