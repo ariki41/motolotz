@@ -39,6 +39,16 @@ class DatabaseSeederTest extends TestCase
         parent::tearDown();
     }
 
+    public function test_it_skips_required_prefecture_seeding_in_the_testing_environment(): void
+    {
+        Prefecture::query()->delete();
+
+        $migration = require database_path('migrations/2026_09_30_000001_seed_required_prefectures.php');
+        $migration->up();
+
+        $this->assertDatabaseCount('prefectures', 0);
+    }
+
     public function test_it_seeds_users_with_the_existing_prefectures(): void
     {
         $this->seed(DatabaseSeeder::class);
