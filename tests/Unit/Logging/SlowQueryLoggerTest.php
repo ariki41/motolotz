@@ -14,7 +14,7 @@ class SlowQueryLoggerTest extends TestCase
     {
         $handler = new TestHandler;
         $logger = new Logger('query', [$handler]);
-        $queryLogger = new SlowQueryLogger($logger, 500, 1.0, 10);
+        $queryLogger = new SlowQueryLogger($logger, 500);
 
         $queryLogger(new QueryExecuted(
             sql: "select * from users where email = 'person@example.test' and id = 42",
@@ -31,17 +31,18 @@ class SlowQueryLoggerTest extends TestCase
         $this->assertSame(['person@example.test', 42], $record->context['bindings']);
     }
 
-    public function test_it_records_normal_queries_and_caps_logs_per_process(): void
+    public function test_it_records_all_normal_and_slow_queries(): void
     {
         $handler = new TestHandler;
         $logger = new Logger('query', [$handler]);
-        $queryLogger = new SlowQueryLogger($logger, 500, 1.0, 1);
+        $queryLogger = new SlowQueryLogger($logger, 500);
         $connection = $this->app['db']->connection();
 
         $queryLogger(new QueryExecuted('select 1', [], 499, $connection));
         $queryLogger(new QueryExecuted('select 2', [], 600, $connection));
 
-        $this->assertCount(1, $handler->getRecords());
+        $this->assertCount(2, $handler->getRecords());
         $this->assertSame('Database query', $handler->getRecords()[0]->message);
+        $this->assertSame('Slow database query', $handler->getRecords()[1]->message);
     }
 }

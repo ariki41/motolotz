@@ -7,27 +7,17 @@ use Psr\Log\LoggerInterface;
 
 class SlowQueryLogger
 {
-    private int $loggedQueries = 0;
-
     public function __construct(
         private readonly LoggerInterface $logger,
         private readonly int $slowQueryMilliseconds,
-        private readonly float $sampleRate,
-        private readonly int $maxQueries,
     ) {}
 
     /**
-     * Record sampled queries, distinguishing normal and slow queries. Bindings
-     * are included to support query-level debugging.
+     * Record every query, distinguishing normal and slow queries. Bindings are
+     * included to support query-level debugging.
      */
     public function __invoke(QueryExecuted $query): void
     {
-        if ($this->loggedQueries >= $this->maxQueries
-            || mt_rand() / mt_getrandmax() > $this->sampleRate) {
-            return;
-        }
-
-        $this->loggedQueries++;
 
         $isSlowQuery = $query->time >= $this->slowQueryMilliseconds;
 
