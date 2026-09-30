@@ -38,8 +38,6 @@ class AppServiceProvider extends ServiceProvider
             $queryLogger = new SlowQueryLogger(
                 logger: Log::channel('query'),
                 slowQueryMilliseconds: config('logging.query.slow_query_ms'),
-                sampleRate: config('logging.query.sample_rate'),
-                maxQueries: config('logging.query.max_per_process'),
             );
 
             DB::listen(fn (QueryExecuted $query) => $queryLogger($query));
