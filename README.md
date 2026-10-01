@@ -141,6 +141,16 @@ YOLP設定は `config/services.php` を通して共通APIクライアントか�
 
 広告は初期状態で無効です。手動で配置するのは、ホームの新着一覧の後、駐輪場詳細の補足情報の後、検索結果一覧の直後だけです。検索画面では検索操作・検索結果のカード・地図を覆わず、一覧とサイトフッターの間に表示します。追従表示・全画面表示・自動挿入は使用せず、フォーム・ログイン画面には表示しません。
 
+AdSense のサイト審査中は、広告枠を出さずに審査用スクリプトと `ads.txt` だけを公開できます。本番環境に次を設定してください。
+
+```dotenv
+ADVERTISING_ENABLED=false
+ADSENSE_VERIFICATION_ENABLED=true
+ADSENSE_CLIENT=ca-pub-<your-publisher-id>
+```
+
+公開後、ページのHTMLに AdSense スクリプトが含まれることと、`/ads.txt` が `google.com, pub-<your-publisher-id>, DIRECT, f08c47fec0942fa0` を返すことを確認してから、AdSense 管理画面で審査を申請してください。審査後は `ADSENSE_VERIFICATION_ENABLED=false` に戻します。
+
 AdSense の審査完了後に、発行されたサイト運営者 ID と各広告ユニットのスロット ID を設定してください。
 
 ```dotenv

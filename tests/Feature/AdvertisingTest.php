@@ -12,6 +12,7 @@ class AdvertisingTest extends TestCase
 
         config([
             'advertising.enabled' => false,
+            'advertising.verification_enabled' => false,
             'advertising.test_mode' => false,
             'advertising.adsense.client' => null,
             'advertising.adsense.slots.home_footer' => null,
@@ -71,6 +72,24 @@ class AdvertisingTest extends TestCase
             ->assertSee('data-ad-placement="search_footer"', false)
             ->assertSee('data-ad-slot="9876543210"', false)
             ->assertSee('adsbygoogle.js?client=ca-pub-1234567890123456', false);
+    }
+
+    public function test_adsense_verification_exposes_the_script_and_ads_txt_without_rendering_an_ad_unit(): void
+    {
+        config([
+            'advertising.verification_enabled' => true,
+            'advertising.adsense.client' => 'ca-pub-1234567890123456',
+        ]);
+
+        $this->get(route('home'))
+            ->assertOk()
+            ->assertSee('adsbygoogle.js?client=ca-pub-1234567890123456', false)
+            ->assertDontSee('data-ad-placement=', false);
+
+        $this->get('/ads.txt')
+            ->assertOk()
+            ->assertHeader('Content-Type', 'text/plain; charset=UTF-8')
+            ->assertSee('google.com, pub-1234567890123456, DIRECT, f08c47fec0942fa0');
     }
 
     public function test_search_results_map_and_footer_fit_the_desktop_viewport(): void

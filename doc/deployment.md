@@ -32,6 +32,9 @@ GitHubの `production` Environment に次を登録します。アプリケーシ
 | Variable | `PRODUCTION_QUERY_LOG_SLOW_MS` | 遅延クエリの記録しきい値ms（未登録時は500） |
 | Variable | `PRODUCTION_QUERY_LOG_SAMPLE_RATE` | 遅延クエリの記録率、0〜1（未登録時は0.1） |
 | Variable | `PRODUCTION_QUERY_LOG_MAX_PER_PROCESS` | PHPプロセスあたりの最大記録件数（未登録時は10） |
+| Variable | `PRODUCTION_ADVERTISING_ENABLED` | 実広告を表示するか。審査中は `false` |
+| Variable | `PRODUCTION_ADSENSE_VERIFICATION_ENABLED` | 審査用スクリプトと `ads.txt` を公開するか。審査中は `true` |
+| Variable | `PRODUCTION_ADSENSE_CLIENT` | AdSense サイト運営者ID（`ca-pub-...`） |
 
 Actionsはこれらから `.env` を一時生成して `/opt/motolotz/.env` に転送します。値をログ出力せず、GitHub Actionsランナーの一時ファイルはジョブ終了時に削除されます。
 

@@ -16,6 +16,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | AdSense site review
+    |--------------------------------------------------------------------------
+    |
+    | Enable this only while the site is being reviewed by AdSense. It exposes
+    | the publisher script and ads.txt without rendering any ad units.
+    |
+    */
+
+    'verification_enabled' => env('ADSENSE_VERIFICATION_ENABLED', false),
+
+    /*
+    |--------------------------------------------------------------------------
     | Development ad placeholder
     |--------------------------------------------------------------------------
     |
