@@ -141,13 +141,13 @@
                         <option value="{{ $value }}" @selected(($rate['max_rate_period'] ?? null) === $value)>{{ $label }}</option>
                     @endforeach
                 </select>
-                <div class="mt-2">
+                <div class="custom-max-rate-period-input mt-2 {{ ($rate['max_rate_period'] ?? null) === 'entry_custom_hours' ? '' : 'hidden' }}">
                     <x-input-label>指定時間（分）</x-input-label>
                     <input
                         class="max-rate-condition-input bp-input {{ $isFree || $noMaxRate ? 'cursor-not-allowed bg-slate-100 text-slate-500' : 'bg-white' }}"
                         data-rate-field="max_rate_period_minutes" type="number" min="1" max="10080"
                         value="{{ $rate['max_rate_period_minutes'] ?? '' }}" placeholder="例：720（12時間）"
-                        @disabled($isFree || $noMaxRate)
+                        @disabled($isFree || $noMaxRate || ($rate['max_rate_period'] ?? null) !== 'entry_custom_hours')
                         @if ($namePrefix !== null) name="{{ $namePrefix }}[max_rate_period_minutes]" @endif>
                     <p class="mt-1 text-xs text-slate-500">「入庫から指定時間」を選んだ場合のみ入力します。</p>
                 </div>

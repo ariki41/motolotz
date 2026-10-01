@@ -108,6 +108,7 @@ class ParkingSpotRateDetailDisplayTest extends TestCase
         $response->assertSee('name="rates[0][max_rate_repeats]"', false);
         $response->assertSeeText('繰り返し適用する');
         $response->assertSeeText('最大料金の適用後に加算する料金（任意）');
+        $response->assertSee('custom-max-rate-period-input mt-2 hidden', false);
     }
 
     public function test_parking_spot_detail_displays_free_rate_label(): void
