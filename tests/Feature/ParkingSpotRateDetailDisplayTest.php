@@ -75,6 +75,24 @@ class ParkingSpotRateDetailDisplayTest extends TestCase
         $response->assertDontSee('以降30分 100円');
     }
 
+    public function test_parking_spot_detail_displays_a_rate_after_a_custom_max_rate_period(): void
+    {
+        [$parkingSpot, $user] = $this->createParkingSpot();
+
+        ParkingSpotRates::create([
+            'parking_spot_id' => $parkingSpot->id,
+            'day_type' => '全日', 'start_time' => '00:00:00', 'end_time' => '00:00:00',
+            'unit_minutes' => 30, 'rate' => 100, 'free_minutes' => 0, 'max_rate' => 1200,
+            'max_rate_period' => 'entry_custom_hours', 'max_rate_period_minutes' => 720,
+            'post_max_rate_unit_minutes' => 30, 'post_max_rate' => 100,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('parking_spot.show', $parkingSpot->id))
+            ->assertOk()
+            ->assertSee('入庫から12時間・1回限り・適用後 30分ごとに100円加算');
+    }
+
     public function test_parking_spot_create_form_can_select_max_rate_conditions(): void
     {
         [, $user] = $this->createParkingSpot();
@@ -84,10 +102,12 @@ class ParkingSpotRateDetailDisplayTest extends TestCase
         $response->assertOk();
         $response->assertSee('name="rates[0][max_rate_period]"', false);
         $response->assertSeeText('入庫から24時間');
+        $response->assertSeeText('入庫から指定時間');
         $response->assertSeeText('当日24時まで');
         $response->assertSeeText('料金時間帯の終了まで');
         $response->assertSee('name="rates[0][max_rate_repeats]"', false);
         $response->assertSeeText('繰り返し適用する');
+        $response->assertSeeText('最大料金の適用後に加算する料金（任意）');
     }
 
     public function test_parking_spot_detail_displays_free_rate_label(): void

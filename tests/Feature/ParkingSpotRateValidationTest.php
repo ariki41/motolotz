@@ -56,6 +56,28 @@ class ParkingSpotRateValidationTest extends TestCase
         $response->assertSessionHasErrors(['rates.0.max_rate']);
     }
 
+    public function test_parking_spot_rate_validation_requires_custom_max_rate_period_and_complete_post_rate(): void
+    {
+        [, $user, $postalcode] = $this->createParkingSpot();
+
+        $response = $this->actingAs($user)
+            ->from(route('parking_spot.create'))
+            ->post(route('parking_spot.confirm'), $this->validParkingSpotInput($postalcode, [
+                'rates' => [$this->validRateInput([
+                    'max_rate_period' => 'entry_custom_hours',
+                    'max_rate_period_minutes' => '',
+                    'post_max_rate_unit_minutes' => 30,
+                    'post_max_rate' => '',
+                ])],
+            ]));
+
+        $response->assertRedirect(route('parking_spot.create'));
+        $response->assertSessionHasErrors([
+            'rates.0.max_rate_period_minutes',
+            'rates.0.post_max_rate',
+        ]);
+    }
+
     public function test_parking_spot_rate_validation_requires_at_least_one_rate(): void
     {
         [, $user, $postalcode] = $this->createParkingSpot();

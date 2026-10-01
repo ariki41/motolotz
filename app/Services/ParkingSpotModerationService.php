@@ -179,7 +179,10 @@ class ParkingSpotModerationService
             'free_minutes' => $rate->free_minutes,
             'max_rate' => $rate->max_rate,
             'max_rate_period' => $rate->max_rate_period,
+            'max_rate_period_minutes' => $rate->max_rate_period_minutes,
             'max_rate_repeats' => $rate->max_rate_repeats,
+            'post_max_rate_unit_minutes' => $rate->post_max_rate_unit_minutes,
+            'post_max_rate' => $rate->post_max_rate,
         ])->values()->all();
     }
 

@@ -18,7 +18,10 @@ class ParkingSpotRates extends Model
         'free_minutes',
         'max_rate',
         'max_rate_period',
+        'max_rate_period_minutes',
         'max_rate_repeats',
+        'post_max_rate_unit_minutes',
+        'post_max_rate',
     ];
 
     protected $casts = [
@@ -26,7 +29,10 @@ class ParkingSpotRates extends Model
         'rate' => 'integer',
         'free_minutes' => 'integer',
         'max_rate' => 'integer',
+        'max_rate_period_minutes' => 'integer',
         'max_rate_repeats' => 'boolean',
+        'post_max_rate_unit_minutes' => 'integer',
+        'post_max_rate' => 'integer',
     ];
 
     public function getRateLabelAttribute(): string
