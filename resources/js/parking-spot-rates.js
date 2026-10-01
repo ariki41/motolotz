@@ -48,6 +48,23 @@ const syncMaxRateState = (item) => {
     });
 };
 
+const syncCustomMaxRatePeriodState = (item) => {
+    const periodInput = item.querySelector('[data-rate-field="max_rate_period"]');
+    const customPeriodContainer = item.querySelector('.custom-max-rate-period-input');
+    const customPeriodInput = item.querySelector('[data-rate-field="max_rate_period_minutes"]');
+    const isFree = item.querySelector('.free-parking-checkbox')?.checked ?? false;
+    const hasNoMaxRate = item.querySelector('.no-max-rate-checkbox')?.checked ?? false;
+
+    if (!periodInput || !customPeriodContainer || !customPeriodInput) {
+        return;
+    }
+
+    const isCustomPeriod = periodInput.value === 'entry_custom_hours';
+    customPeriodContainer.classList.toggle('hidden', !isCustomPeriod);
+    customPeriodInput.disabled = isFree || hasNoMaxRate || !isCustomPeriod;
+    setInputDisabledAppearance(customPeriodInput, isFree || hasNoMaxRate);
+};
+
 const syncFreeParkingState = (item) => {
     const checkbox = item.querySelector('.free-parking-checkbox');
     const input = item.querySelector('.rate-input');
@@ -109,6 +126,7 @@ export const initParkingSpotRates = (root) => {
             syncFreeParkingState(item);
             syncFreeMinutesState(item);
             syncMaxRateState(item);
+            syncCustomMaxRatePeriodState(item);
         });
 
         list.querySelectorAll('[data-delete-rate]').forEach((button) => {
@@ -145,12 +163,12 @@ export const initParkingSpotRates = (root) => {
     });
 
     list.addEventListener('change', (event) => {
-        const checkbox = event.target.closest('.free-parking-checkbox, .no-max-rate-checkbox, .no-free-minutes-checkbox');
-        if (!checkbox || !list.contains(checkbox)) {
+        const control = event.target.closest('.free-parking-checkbox, .no-max-rate-checkbox, .no-free-minutes-checkbox, [data-rate-field="max_rate_period"]');
+        if (!control || !list.contains(control)) {
             return;
         }
 
-        const item = checkbox.closest('[data-rate-item]');
+        const item = control.closest('[data-rate-item]');
         if (!item) {
             return;
         }
@@ -158,6 +176,7 @@ export const initParkingSpotRates = (root) => {
         syncFreeParkingState(item);
         syncFreeMinutesState(item);
         syncMaxRateState(item);
+        syncCustomMaxRatePeriodState(item);
     });
 
     renumberRates();

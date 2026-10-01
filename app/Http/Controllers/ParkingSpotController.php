@@ -238,7 +238,10 @@ class ParkingSpotController extends Controller
             'max_rate' => $rate->max_rate,
             'no_max_rate' => $rate->max_rate === null ? '1' : '0',
             'max_rate_period' => $rate->max_rate_period,
+            'max_rate_period_minutes' => $rate->max_rate_period_minutes,
             'max_rate_repeats' => $rate->max_rate_repeats,
+            'post_max_rate_unit_minutes' => $rate->post_max_rate_unit_minutes,
+            'post_max_rate' => $rate->post_max_rate,
         ])->values()->all() ?: [$this->defaultRateInput()];
         $imagePaths = $parkingSpot->image_paths;
         $businessHoursInput = $parkingSpot->businessHours->map(fn ($hour) => [
@@ -311,7 +314,10 @@ class ParkingSpotController extends Controller
             'max_rate' => '',
             'no_max_rate' => '0',
             'max_rate_period' => 'entry_24_hours',
+            'max_rate_period_minutes' => '',
             'max_rate_repeats' => false,
+            'post_max_rate_unit_minutes' => '',
+            'post_max_rate' => '',
         ];
     }
 

@@ -37,7 +37,14 @@ class ParkingSpotRequest extends FormRequest
 
                 if (($rate['no_max_rate'] ?? false)) {
                     $rate['max_rate_period'] = null;
+                    $rate['max_rate_period_minutes'] = null;
                     $rate['max_rate_repeats'] = false;
+                    $rate['post_max_rate_unit_minutes'] = null;
+                    $rate['post_max_rate'] = null;
+                }
+
+                if (($rate['max_rate_period'] ?? null) !== MaxRatePeriod::EntryCustomHours->value) {
+                    $rate['max_rate_period_minutes'] = null;
                 }
 
                 if (($rate['no_free_minutes'] ?? false)) {
@@ -97,6 +104,7 @@ class ParkingSpotRequest extends FormRequest
             }
 
             $this->validateRateTimeConflicts($validator);
+            $this->validateMaxRateConditions($validator);
             $this->validateBusinessHourConflicts($validator);
         });
     }
@@ -156,7 +164,10 @@ class ParkingSpotRequest extends FormRequest
             'rates.*.no_max_rate' => 'nullable|boolean',
             'rates.*.max_rate' => 'required_unless:rates.*.no_max_rate,1|nullable|integer|min:1',
             'rates.*.max_rate_period' => ['nullable', Rule::enum(MaxRatePeriod::class)],
+            'rates.*.max_rate_period_minutes' => 'nullable|integer|min:1|max:10080',
             'rates.*.max_rate_repeats' => 'nullable|boolean',
+            'rates.*.post_max_rate_unit_minutes' => ['nullable', 'integer', Rule::in(array_keys(config('categories.parking_spot_rate_unit_minutes')))],
+            'rates.*.post_max_rate' => 'nullable|integer|min:1',
         ];
     }
 
@@ -262,6 +273,13 @@ class ParkingSpotRequest extends FormRequest
             'rates.*.max_rate.min' => '最大料金は1円以上で入力してください。',
             'rates.*.max_rate.required_unless' => '最大料金なしを選択しない場合、最大料金は必須です。',
             'rates.*.max_rate_period.enum' => '最大料金の適用期間を選択してください。',
+            'rates.*.max_rate_period_minutes.integer' => '最大料金の適用時間は整数で入力してください。',
+            'rates.*.max_rate_period_minutes.min' => '最大料金の適用時間は1分以上で入力してください。',
+            'rates.*.max_rate_period_minutes.max' => '最大料金の適用時間は7日以内で入力してください。',
+            'rates.*.post_max_rate_unit_minutes.integer' => '適用後の料金単位は整数で入力してください。',
+            'rates.*.post_max_rate_unit_minutes.in' => '適用後の料金単位を選択してください。',
+            'rates.*.post_max_rate.integer' => '適用後の料金は整数で入力してください。',
+            'rates.*.post_max_rate.min' => '適用後の料金は1円以上で入力してください。',
         ];
     }
 
@@ -297,6 +315,31 @@ class ParkingSpotRequest extends FormRequest
 
             $validator->errors()->add("rates.{$leftIndex}.time_conflict", $message);
             $validator->errors()->add("rates.{$rightIndex}.time_conflict", $message);
+        }
+    }
+
+    private function validateMaxRateConditions(Validator $validator): void
+    {
+        foreach ($this->input('rates', []) as $index => $rate) {
+            if (! is_array($rate) || ($rate['no_max_rate'] ?? false)) {
+                continue;
+            }
+
+            if (($rate['max_rate_period'] ?? null) === MaxRatePeriod::EntryCustomHours->value
+                && empty($rate['max_rate_period_minutes'])) {
+                $validator->errors()->add("rates.{$index}.max_rate_period_minutes", '指定時間を入力してください。');
+            }
+
+            $hasUnit = filled($rate['post_max_rate_unit_minutes'] ?? null);
+            $hasRate = filled($rate['post_max_rate'] ?? null);
+            if ($hasUnit !== $hasRate) {
+                $field = $hasUnit ? 'post_max_rate' : 'post_max_rate_unit_minutes';
+                $validator->errors()->add("rates.{$index}.{$field}", '最大料金の適用後の料金単位と料金を両方入力してください。');
+            }
+
+            if (($rate['max_rate_repeats'] ?? false) && $hasUnit && $hasRate) {
+                $validator->errors()->add("rates.{$index}.post_max_rate", '繰り返し適用と最大料金の適用後の加算は同時に設定できません。');
+            }
         }
     }
 

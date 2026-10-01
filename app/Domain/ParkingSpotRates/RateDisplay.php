@@ -33,12 +33,15 @@ final readonly class RateDisplay
             $rate->free_minutes,
             $rate->max_rate,
             $rate->max_rate_period,
+            $rate->max_rate_period_minutes,
             (bool) ($rate->max_rate_repeats ?? false),
+            $rate->post_max_rate_unit_minutes,
+            $rate->post_max_rate,
         );
     }
 
     /**
-     * @param  array{day_type?: mixed, start_time?: mixed, end_time?: mixed, unit_minutes?: mixed, rate?: mixed, free_minutes?: mixed, max_rate?: mixed, max_rate_period?: mixed, max_rate_repeats?: mixed}  $rate
+     * @param  array{day_type?: mixed, start_time?: mixed, end_time?: mixed, unit_minutes?: mixed, rate?: mixed, free_minutes?: mixed, max_rate?: mixed, max_rate_period?: mixed, max_rate_period_minutes?: mixed, max_rate_repeats?: mixed, post_max_rate_unit_minutes?: mixed, post_max_rate?: mixed}  $rate
      */
     public static function fromArray(array $rate): self
     {
@@ -51,7 +54,10 @@ final readonly class RateDisplay
             (int) ($rate['free_minutes'] ?? 0),
             self::nullableInteger($rate['max_rate'] ?? null),
             self::nullableString($rate['max_rate_period'] ?? null),
+            self::nullableInteger($rate['max_rate_period_minutes'] ?? null),
             (bool) ($rate['max_rate_repeats'] ?? false),
+            self::nullableInteger($rate['post_max_rate_unit_minutes'] ?? null),
+            self::nullableInteger($rate['post_max_rate'] ?? null),
         );
     }
 
@@ -77,7 +83,10 @@ final readonly class RateDisplay
         int $freeMinutes,
         ?int $maxRate,
         ?string $maxRatePeriod,
+        ?int $maxRatePeriodMinutes,
         bool $maxRateRepeats,
+        ?int $postMaxRateUnitMinutes,
+        ?int $postMaxRate,
     ): self {
         if ($rate === 0) {
             return new self(
@@ -85,7 +94,7 @@ final readonly class RateDisplay
                 self::formatTimeRange($startTime, $endTime),
                 '無料',
                 self::maxRateLabel($maxRate),
-                self::maxRateConditionLabel($maxRate, $maxRatePeriod, $maxRateRepeats),
+                self::maxRateConditionLabel($maxRate, $maxRatePeriod, $maxRatePeriodMinutes, $maxRateRepeats, $postMaxRateUnitMinutes, $postMaxRate),
                 '無料',
             );
         }
@@ -97,7 +106,7 @@ final readonly class RateDisplay
         }
 
         $maxRateLabel = self::maxRateLabel($maxRate);
-        $maxRateConditionLabel = self::maxRateConditionLabel($maxRate, $maxRatePeriod, $maxRateRepeats);
+        $maxRateConditionLabel = self::maxRateConditionLabel($maxRate, $maxRatePeriod, $maxRatePeriodMinutes, $maxRateRepeats, $postMaxRateUnitMinutes, $postMaxRate);
 
         return new self(
             $dayType,
@@ -120,7 +129,7 @@ final readonly class RateDisplay
         return number_format($maxRate).'円';
     }
 
-    private static function maxRateConditionLabel(?int $maxRate, ?string $period, bool $repeats): string
+    private static function maxRateConditionLabel(?int $maxRate, ?string $period, ?int $periodMinutes, bool $repeats, ?int $postUnitMinutes, ?int $postRate): string
     {
         if ($maxRate === null) {
             return '—';
@@ -132,7 +141,14 @@ final readonly class RateDisplay
             return '適用条件未設定';
         }
 
-        return $condition->label().'・'.($repeats ? '繰り返し適用' : '1回限り');
+        $periodLabel = $condition === MaxRatePeriod::EntryCustomHours && $periodMinutes !== null
+            ? '入庫から'.self::formatMinutes($periodMinutes)
+            : $condition->label();
+        $postRateLabel = $postUnitMinutes !== null && $postRate !== null
+            ? '・適用後 '.self::formatMinutes($postUnitMinutes).'ごとに'.number_format($postRate).'円加算'
+            : '';
+
+        return $periodLabel.'・'.($repeats ? '繰り返し適用' : '1回限り').$postRateLabel;
     }
 
     private static function isOvernight(?string $startTime, ?string $endTime): bool

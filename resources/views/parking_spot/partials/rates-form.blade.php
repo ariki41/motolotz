@@ -40,7 +40,10 @@
             'max_rate' => '',
             'no_max_rate' => false,
             'max_rate_period' => 'entry_24_hours',
+            'max_rate_period_minutes' => '',
             'max_rate_repeats' => false,
+            'post_max_rate_unit_minutes' => '',
+            'post_max_rate' => '',
         ]" :rate-day-types="$rateDayTypes" :rate-unit-minutes="$rateUnitMinutes" :max-rate-periods="$maxRatePeriods" template />
     </template>
 </div>

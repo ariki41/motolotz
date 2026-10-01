@@ -197,6 +197,36 @@ class ParkingSpotRatePersistenceTest extends TestCase
         ]);
     }
 
+    public function test_parking_spot_persists_a_rate_after_a_custom_max_rate_period(): void
+    {
+        [, $user, $postalcode] = $this->createParkingSpot();
+
+        app(ParkingSpotPersistenceService::class)->create([
+            'name' => '最大料金後加算テスト駐輪場',
+            'postalcode' => $postalcode->postalcode,
+            'address' => '東京都千代田区千代田1-2',
+            'longitude' => 139.753000,
+            'latitude' => 35.685000,
+            'capacity' => 1,
+            'max_displacement_class' => EngineDisplacementClass::UpTo400cc->value,
+            'opening_time' => '00:00',
+            'closing_time' => '00:00',
+            'rates' => [[
+                'day_type' => '全日', 'start_time' => '00:00', 'end_time' => '00:00',
+                'unit_minutes' => 30, 'rate' => 100, 'free_minutes' => 0, 'max_rate' => 1200,
+                'max_rate_period' => 'entry_custom_hours', 'max_rate_period_minutes' => 720,
+                'post_max_rate_unit_minutes' => 30, 'post_max_rate' => 100,
+            ]],
+        ], $user);
+
+        $this->assertDatabaseHas('parking_spot_rates', [
+            'max_rate_period' => 'entry_custom_hours',
+            'max_rate_period_minutes' => 720,
+            'post_max_rate_unit_minutes' => 30,
+            'post_max_rate' => 100,
+        ]);
+    }
+
     public function test_free_rate_is_normalized_before_persistence(): void
     {
         [, $user, $postalcode] = $this->createParkingSpot();
