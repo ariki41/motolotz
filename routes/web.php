@@ -24,7 +24,9 @@ Route::get('/ads.txt', function () {
     $client = config('advertising.adsense.client');
 
     abort_unless(
-        config('advertising.enabled') && is_string($client) && Str::startsWith($client, 'ca-pub-'),
+        (config('advertising.enabled') || config('advertising.verification_enabled'))
+            && is_string($client)
+            && Str::startsWith($client, 'ca-pub-'),
         404,
     );
 
